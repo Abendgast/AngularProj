@@ -1,31 +1,110 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>🧩 Fix the Interface - Debug Game</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A fun debugging game where you fix broken UI elements">
-  <meta name="theme-color" content="#0f1419">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    html, body {
-      height: 100%;
-      width: 100%;
-    }
-    body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: #0f1419;
-    }
-  </style>
+    <meta charset="utf-8">
+    <title>🧩 Fix the Interface - Debug Game</title>
+    <base href="/">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A fun debugging game where you fix broken UI elements">
+    <meta name="theme-color" content="#0f1419">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* RESET */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* === NEON FUTURISTIC THEME === */
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #e8f6ff;
+            background: radial-gradient(circle at 30% 30%, #09121f, #05070b 80%);
+            overflow: hidden;
+            position: relative;
+            line-height: 1.6;
+            animation: fadeInBg 2s ease-in-out;
+        }
+
+        /* glowing grid overlay */
+        body::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                    0deg,
+                    rgba(0, 255, 255, 0.05) 0px,
+                    rgba(0, 255, 255, 0.05) 1px,
+                    transparent 1px,
+                    transparent 80px
+            ),
+            repeating-linear-gradient(
+                    90deg,
+                    rgba(0, 255, 255, 0.05) 0px,
+                    rgba(0, 255, 255, 0.05) 1px,
+                    transparent 1px,
+                    transparent 80px
+            );
+            z-index: 0;
+            pointer-events: none;
+            animation: gridPulse 6s infinite alternate;
+        }
+
+        /* glowing edges vignette */
+        body::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.85) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* MAIN APP ROOT */
+        app-root {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            text-align: center;
+            color: #00eaff;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            text-shadow: 0 0 15px rgba(0, 234, 255, 0.8),
+            0 0 30px rgba(0, 234, 255, 0.3);
+            animation: fadeInUp 1.5s ease-out;
+        }
+
+        /* Animations */
+        @keyframes fadeInBg {
+            from { opacity: 0; filter: blur(10px); }
+            to { opacity: 1; filter: blur(0); }
+        }
+
+        @keyframes fadeInUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes gridPulse {
+            0% { opacity: 0.25; }
+            100% { opacity: 0.6; }
+        }
+    </style>
 </head>
+
 <body>
-  <app-root></app-root>
+<app-root>Loading the Grid...</app-root>
 </body>
 </html>
