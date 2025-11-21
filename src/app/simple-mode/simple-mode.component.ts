@@ -10,7 +10,7 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   @Output() backToMenu = new EventEmitter<void>();
   
   state$ = this.simpleModeService.state$;
-  hammerPosition = { x: 100, y: 100 };
+  hammerPosition = { x: 200, y: 200 };
   isDragging = false;
   dragOffset = { x: 0, y: 0 };
   hoveredDefect: string | null = null;
@@ -21,11 +21,15 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   paintProgress: { [key: string]: number } = {};
   circularTrackingInterval: any = null;
   paintTrackingInterval: { [key: string]: any } = {};
+  currentLevel = 1;
 
   constructor(public simpleModeService: SimpleModeService) {}
 
   ngOnInit() {
     this.simpleModeService.startLevel(1);
+    this.state$.subscribe(state => {
+      this.currentLevel = state.level;
+    });
   }
 
   ngOnDestroy() {
@@ -56,8 +60,13 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
         x: event.clientX - this.dragOffset.x,
         y: event.clientY - this.dragOffset.y
       };
+      // For Level 1, continue painting while dragging
+      if (this.currentLevel === 1 && this.hoveredDefect) {
+        this.checkDefectHover(event);
+      }
+    } else {
+      this.checkDefectHover(event);
     }
-    this.checkDefectHover(event);
   }
 
   onMouseUp(event: MouseEvent) {
@@ -107,6 +116,9 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
                 this.startCircularTracking(defectId, centerX, centerY);
               } else if (defect.type === 'paint') {
                 this.startPaintTracking(defectId);
+              } else if (defect.type === 'simple' && this.currentLevel === 1) {
+                // Level 1: simple defects need painting
+                this.startPaintTracking(defectId);
               }
             }
           }).unsubscribe();
@@ -135,8 +147,18 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
       const defect = state.defects.find(d => d.id === this.hoveredDefect);
       if (!defect || defect.fixed) return;
       
-      if (defect.type === 'simple' || defect.type === 'crack') {
-        if (defect.type === 'crack' && this.holdProgress < 100) {
+      if (defect.type === 'simple') {
+        // Level 1: need to paint first
+        if (this.currentLevel === 1) {
+          if ((this.paintProgress[defect.id] || 0) >= 100) {
+            this.simpleModeService.hitDefect(this.hoveredDefect!);
+          }
+        } else {
+          // Other levels: simple hit
+          this.simpleModeService.hitDefect(this.hoveredDefect!);
+        }
+      } else if (defect.type === 'crack') {
+        if (this.holdProgress < 100) {
           return; // Need to hold first
         }
         this.simpleModeService.hitDefect(this.hoveredDefect!);
