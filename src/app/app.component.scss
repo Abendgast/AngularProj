@@ -211,3 +211,71 @@ body::before {
   0% { opacity: 0.2; }
   100% { opacity: 0.5; }
 }
+
+/* === MENU === */
+.menu-wrap {
+  justify-content: center;
+  align-items: center;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.menu-tile {
+  background: rgba(10, 15, 25, 0.8);
+  border: 2px solid rgba(0, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 156, 0.1));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.menu-tile:hover::before {
+  opacity: 1;
+}
+
+.menu-tile:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.6);
+  transform: translateY(-8px);
+}
+
+.menu-tile-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+}
+
+.menu-tile-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+
+.menu-tile-desc {
+  color: var(--text-secondary);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}

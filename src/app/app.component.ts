@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { Observable } from 'rxjs';
 import { GameService, GameElement, GameState } from './services/game.service';
 
+type ViewMode = 'menu' | 'game' | 'simple-mode';
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -10,12 +12,29 @@ import { GameService, GameElement, GameState } from './services/game.service';
 export class AppComponent {
   state$: Observable<GameState>;
   dragSrcId: string | null = null;
+  currentView: ViewMode = 'menu';
 
   constructor(private game: GameService) {
     this.state$ = this.game.state;
   }
 
+  showMenu() {
+    this.currentView = 'menu';
+  }
+
+  startNormalGame() {
+    this.currentView = 'game';
+    const snap = this.getSnapshot();
+    const lvl = snap ? snap.level : 1;
+    this.game.startLevel(lvl);
+  }
+
+  startSimpleMode() {
+    this.currentView = 'simple-mode';
+  }
+
   start() {
+    if (this.currentView !== 'game') return;
     const snap = this.getSnapshot();
     const lvl = snap ? snap.level : 1;
     this.game.startLevel(lvl);
