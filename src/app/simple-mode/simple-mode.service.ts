@@ -61,6 +61,20 @@ export class SimpleModeService {
 
   hitDefect(defectId: string) {
     const state = this.stateSubject$.value;
+    const defect = state.defects.find(d => d.id === defectId);
+    
+    if (!defect) {
+      console.warn('hitDefect: defect not found', defectId);
+      return;
+    }
+    
+    if (defect.fixed) {
+      console.warn('hitDefect: defect already fixed', defectId);
+      return;
+    }
+    
+    console.log('Fixing defect:', { id: defectId, type: defect.type, level: state.level });
+    
     const defects = state.defects.map(d => {
       if (d.id === defectId && !d.fixed) {
         return { ...d, fixed: true };
@@ -69,6 +83,14 @@ export class SimpleModeService {
     });
 
     const allFixed = defects.every(d => d.fixed);
+    const fixedCount = defects.filter(d => d.fixed).length;
+    
+    console.log('After fix:', { 
+      total: defects.length, 
+      fixed: fixedCount, 
+      allFixed,
+      level: state.level 
+    });
     
     this.stateSubject$.next({
       ...state,

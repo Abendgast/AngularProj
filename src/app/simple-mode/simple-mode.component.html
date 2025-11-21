@@ -29,21 +29,27 @@
          (mouseup)="onMouseUp($event)"
          (wheel)="onMouseWheel($event)">
       
-      <!-- Hammer / Roller -->
+      <!-- Tool (changes based on defect type on Level 2+) -->
       <div class="tool" 
-           [class.roller]="state.level === 1"
-           [class.hammer]="state.level !== 1"
+           [class.roller]="state.level === 1 || currentToolType === 'brush'"
+           [class.hammer]="state.level >= 2 && (currentToolType === 'hammer' || !hoveredDefect)"
+           [class.wrench]="state.level >= 2 && currentToolType === 'wrench'"
+           [class.pliers]="state.level >= 2 && currentToolType === 'pliers'"
            [style.left.px]="hammerPosition.x"
            [style.top.px]="hammerPosition.y"
            [class.dragging]="isDragging"
            [class.hovering]="hoveredDefect !== null"
-           [class.painting]="state.level === 1 && isDragging && hoveredDefect !== null"
+           [class.painting]="(state.level === 1 || currentToolType === 'brush') && isDragging && hoveredDefect !== null"
            (mousedown)="onHammerMouseDown($event)"
            [style.display]="'flex'"
            [style.opacity]="1"
            [style.visibility]="'visible'">
         <span *ngIf="state.level === 1">🖌️</span>
-        <span *ngIf="state.level !== 1">🔨</span>
+        <span *ngIf="state.level >= 2 && currentToolType === 'hammer'">🔨</span>
+        <span *ngIf="state.level >= 2 && currentToolType === 'wrench'">🔧</span>
+        <span *ngIf="state.level >= 2 && currentToolType === 'pliers'">🔌</span>
+        <span *ngIf="state.level >= 2 && currentToolType === 'brush'">🖌️</span>
+        <span *ngIf="state.level >= 2 && !hoveredDefect && currentToolType === 'hammer'">🔨</span>
       </div>
 
       <!-- Defects -->
@@ -75,7 +81,7 @@
         <!-- Crack defect -->
         <div *ngIf="defect.type === 'crack'" class="defect-content">
           <div class="defect-icon">⚡</div>
-          <div class="defect-label">Crack</div>
+          <div class="defect-label">{{ defect.fixed ? '✓ Fixed' : 'Crack' }}</div>
           <div class="hold-progress" *ngIf="hoveredDefect === defect.id && !defect.fixed">
             <div class="hold-bar" [style.width.%]="holdProgress"></div>
             <div class="hold-text">{{ holdProgress >= 100 ? 'Ready!' : 'Hold...' }}</div>
@@ -85,7 +91,7 @@
         <!-- Screw defect -->
         <div *ngIf="defect.type === 'screw'" class="defect-content">
           <div class="defect-icon" [style.transform]="'rotate(' + (defect.ui?.rotation || 0) + 'deg)'">🔩</div>
-          <div class="defect-label">Screw</div>
+          <div class="defect-label">{{ defect.fixed ? '✓ Fixed' : 'Screw' }}</div>
           <div class="circular-progress" *ngIf="hoveredDefect === defect.id && !defect.fixed">
             <div class="progress-text">{{ circularProgress }}%</div>
           </div>
@@ -95,19 +101,25 @@
         <div *ngIf="defect.type === 'wire'" class="defect-content wire-content">
           <div class="wire-end" 
                [class.connected]="defect.ui?.connected"
+               [class.can-drag]="!defect.fixed && !defect.ui?.connected"
                draggable="true"
                (dragstart)="onWireDragStart($event, defect)"
                (drop)="onWireDrop($event, defect)"
                (dragover)="allowDrop($event)">
             <div class="wire-icon">🔌</div>
+            <div class="wire-hint" *ngIf="!defect.fixed && !defect.ui?.connected">← Drag</div>
           </div>
-          <div class="defect-label">Wire {{ defect.ui?.connected ? '✓' : '' }}</div>
+          <div class="defect-label">
+            <span *ngIf="defect.fixed">✓ Fixed</span>
+            <span *ngIf="!defect.fixed && defect.ui?.connected">✓ Connected - Hit!</span>
+            <span *ngIf="!defect.fixed && !defect.ui?.connected">Wire - Drag to connect</span>
+          </div>
         </div>
 
         <!-- Paint defect -->
         <div *ngIf="defect.type === 'paint'" class="defect-content paint-content">
           <div class="defect-icon">🎨</div>
-          <div class="defect-label">Paint Leak</div>
+          <div class="defect-label">{{ defect.fixed ? '✓ Fixed' : 'Paint Leak' }}</div>
           <div class="paint-progress" *ngIf="hoveredDefect === defect.id && !defect.fixed">
             <div class="paint-bar" [style.width.%]="paintProgress[defect.id] || 0"></div>
             <div class="paint-text">{{ (paintProgress[defect.id] || 0) >= 100 ? 'Ready!' : 'Paint...' }}</div>

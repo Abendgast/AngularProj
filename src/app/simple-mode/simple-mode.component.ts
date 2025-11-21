@@ -14,6 +14,7 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   isDragging = false;
   dragOffset = { x: 0, y: 0 };
   hoveredDefect: string | null = null;
+  currentToolType: string = 'hammer'; // 'roller', 'hammer', 'wrench', 'pliers', 'brush'
   holdTimer: any = null;
   holdProgress = 0;
   circularProgress = 0;
@@ -33,6 +34,12 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
       // Subscribe to state changes
       this.state$.subscribe(state => {
         this.currentLevel = state.level;
+        // Reset tool type when level changes
+        if (state.level === 1) {
+          this.currentToolType = 'roller';
+        } else {
+          this.currentToolType = 'hammer';
+        }
         
         // Debug log
         console.log('Simple Mode State:', {
@@ -153,6 +160,20 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
     if (this.hoveredDefect) {
       event.preventDefault();
       this.simpleModeService.handleWheelOnDefect(this.hoveredDefect, event.deltaY);
+      
+      // Check if screw is ready to fix after wheel
+      this.simpleModeService.getStateSnapshot().subscribe(state => {
+        const defect = state.defects.find(d => d.id === this.hoveredDefect);
+        if (defect && defect.type === 'screw' && !defect.fixed) {
+          const wheelProgress = defect.ui?.wheelProgress || 0;
+          if (wheelProgress >= 100) {
+            setTimeout(() => {
+              console.log('Auto-fixing screw after wheel complete:', this.hoveredDefect);
+              this.simpleModeService.hitDefect(this.hoveredDefect!);
+            }, 100);
+          }
+        }
+      }).unsubscribe();
     }
   }
 
@@ -189,6 +210,19 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           this.simpleModeService.getStateSnapshot().subscribe(state => {
             const defect = state.defects.find(d => d.id === defectId);
             if (defect && !defect.fixed) {
+              // Update tool type based on defect type (Level 2+)
+              if (this.currentLevel >= 2) {
+                if (defect.type === 'crack' || defect.type === 'simple') {
+                  this.currentToolType = 'hammer';
+                } else if (defect.type === 'screw') {
+                  this.currentToolType = 'wrench';
+                } else if (defect.type === 'wire') {
+                  this.currentToolType = 'pliers';
+                } else if (defect.type === 'paint') {
+                  this.currentToolType = 'brush';
+                }
+              }
+              
               if (defect.type === 'crack') {
                 this.startHoldTimer(defectId);
               } else if (defect.type === 'screw') {
@@ -214,6 +248,10 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           this.clearHoldTimer();
           this.clearCircularTracking();
           this.clearPaintTracking();
+          // Reset tool to default
+          if (this.currentLevel >= 2) {
+            this.currentToolType = 'hammer';
+          }
         }
       }).unsubscribe();
     }
@@ -242,10 +280,12 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           this.simpleModeService.hitDefect(this.hoveredDefect!);
         }
       } else if (defect.type === 'crack') {
-        if (this.holdProgress < 100) {
-          return; // Need to hold first
+        if (this.holdProgress >= 100) {
+          console.log('Fixing crack defect:', this.hoveredDefect);
+          this.simpleModeService.hitDefect(this.hoveredDefect!);
+        } else {
+          console.log('Crack not ready, hold progress:', this.holdProgress);
         }
-        this.simpleModeService.hitDefect(this.hoveredDefect!);
       } else if (defect.type === 'screw') {
         // Check if screw has been rotated enough (via wheel or circular motion)
         const wheelProgress = defect.ui?.wheelProgress || 0;
@@ -255,10 +295,14 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
       } else if (defect.type === 'wire') {
         // Wire connection is handled separately - need to connect first
         if (defect.ui?.connected) {
+          console.log('Fixing connected wire defect:', this.hoveredDefect);
           this.simpleModeService.hitDefect(this.hoveredDefect!);
+        } else {
+          console.log('Wire not connected yet. Drag wire ends together first.');
         }
       } else if (defect.type === 'paint') {
-        if (this.paintProgress[defect.id] >= 100) {
+        const progress = this.paintProgress[defect.id] || 0;
+        if (progress >= 100) {
           this.simpleModeService.hitDefect(this.hoveredDefect!);
         }
       }
@@ -273,11 +317,28 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
     const increment = (interval / totalTime) * 100;
     
     this.holdTimer = setInterval(() => {
+      // Check if still hovering over the same defect
+      if (this.hoveredDefect !== defectId) {
+        this.clearHoldTimer();
+        return;
+      }
+      
       this.holdProgress += increment;
       if (this.holdProgress >= 100) {
         this.holdProgress = 100;
         clearInterval(this.holdTimer);
         this.holdTimer = null;
+        
+        // Auto-fix when hold is complete
+        setTimeout(() => {
+          this.simpleModeService.getStateSnapshot().subscribe(state => {
+            const defect = state.defects.find(d => d.id === defectId);
+            if (defect && !defect.fixed && this.hoveredDefect === defectId) {
+              console.log('Auto-fixing crack after hold complete:', defectId);
+              this.simpleModeService.hitDefect(defectId);
+            }
+          }).unsubscribe();
+        }, 100);
       }
     }, interval);
   }
@@ -319,6 +380,23 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
         if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
         if (Math.abs(angleDiff) > 0.05) {
           this.circularProgress = Math.min(100, this.circularProgress + Math.abs(angleDiff) * 30);
+          
+          // Auto-fix when circular progress reaches 100%
+          if (this.circularProgress >= 100) {
+            clearInterval(this.circularTrackingInterval);
+            this.circularTrackingInterval = null;
+            
+            setTimeout(() => {
+              this.simpleModeService.getStateSnapshot().subscribe(state => {
+                const defect = state.defects.find(d => d.id === defectId);
+                if (defect && !defect.fixed && this.hoveredDefect === defectId) {
+                  console.log('Auto-fixing screw after circular motion complete:', defectId);
+                  this.simpleModeService.hitDefect(defectId);
+                }
+              }).unsubscribe();
+            }, 100);
+            return;
+          }
         }
       }
       lastHammerAngle = angle;
@@ -351,14 +429,17 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           clearInterval(interval);
           delete this.paintTrackingInterval[defectId];
           
-          // Check if defect is already fixed
-          this.simpleModeService.getStateSnapshot().subscribe(state => {
-            const defect = state.defects.find(d => d.id === defectId);
-            if (defect && !defect.fixed) {
-              console.log('Auto-fixing defect after 100% paint:', defectId);
-              this.simpleModeService.hitDefect(defectId);
-            }
-          }).unsubscribe();
+          // Small delay to ensure state is updated
+          setTimeout(() => {
+            // Check if defect is already fixed
+            this.simpleModeService.getStateSnapshot().subscribe(state => {
+              const defect = state.defects.find(d => d.id === defectId);
+              if (defect && !defect.fixed) {
+                console.log('Auto-fixing defect after 100% paint:', defectId, defect.type);
+                this.simpleModeService.hitDefect(defectId);
+              }
+            }).unsubscribe();
+          }, 100);
         }
       } else {
         clearInterval(interval);
@@ -383,21 +464,34 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   }
 
   onWireDragStart(event: DragEvent, defect: SimpleDefect) {
-    if (defect.fixed || defect.type !== 'wire') return;
+    if (defect.fixed || defect.type !== 'wire' || defect.ui?.connected) {
+      event.preventDefault();
+      return;
+    }
     event.dataTransfer!.setData('text/plain', defect.id);
     event.dataTransfer!.effectAllowed = 'move';
+    console.log('Dragging wire:', defect.id);
   }
 
   onWireDrop(event: DragEvent, targetDefect: SimpleDefect) {
     event.preventDefault();
-    if (targetDefect.fixed || targetDefect.type !== 'wire') return;
+    event.stopPropagation();
+    if (targetDefect.fixed || targetDefect.type !== 'wire' || targetDefect.ui?.connected) return;
     
     const sourceId = event.dataTransfer!.getData('text/plain');
     if (sourceId && sourceId !== targetDefect.id) {
       this.simpleModeService.getStateSnapshot().subscribe(state => {
         const sourceDefect = state.defects.find(d => d.id === sourceId);
-        if (sourceDefect && sourceDefect.type === 'wire' && !sourceDefect.fixed) {
+        if (sourceDefect && sourceDefect.type === 'wire' && !sourceDefect.fixed && !sourceDefect.ui?.connected) {
+          console.log('Connecting wires:', sourceId, 'to', targetDefect.id);
           this.simpleModeService.connectWires(sourceId, targetDefect.id);
+          
+          // Show message that wires are connected
+          setTimeout(() => {
+            console.log('Wires connected! Now use pliers tool to fix.');
+          }, 100);
+        } else {
+          console.log('Cannot connect: source already connected or invalid');
         }
       }).unsubscribe();
     }
