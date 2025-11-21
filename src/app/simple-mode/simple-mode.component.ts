@@ -26,10 +26,57 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   constructor(public simpleModeService: SimpleModeService) {}
 
   ngOnInit() {
-    this.simpleModeService.startLevel(1);
-    this.state$.subscribe(state => {
-      this.currentLevel = state.level;
-    });
+    // Wait for viewport to be ready and DOM to be rendered
+    setTimeout(() => {
+      this.simpleModeService.startLevel(1);
+      
+      // Subscribe to state changes
+      this.state$.subscribe(state => {
+        this.currentLevel = state.level;
+        
+        // Debug log
+        console.log('Simple Mode State:', {
+          level: state.level,
+          defectsCount: state.defects.length,
+          levelComplete: state.levelComplete
+        });
+        
+        if (state.defects.length > 0) {
+          console.log('First 3 defects:', state.defects.slice(0, 3).map(d => ({
+            id: d.id,
+            type: d.type,
+            x: d.x,
+            y: d.y,
+            fixed: d.fixed
+          })));
+          
+          // Check if defects are in DOM after a short delay
+          setTimeout(() => {
+            const defectsInDOM = document.querySelectorAll('.simple-defect');
+            console.log('Defects in DOM:', defectsInDOM.length);
+            if (defectsInDOM.length === 0) {
+              console.error('ERROR: No defects found in DOM!');
+            } else {
+              defectsInDOM.forEach((el, idx) => {
+                const rect = el.getBoundingClientRect();
+                console.log(`Defect ${idx} in DOM:`, {
+                  id: el.getAttribute('data-defect-id'),
+                  visible: rect.width > 0 && rect.height > 0,
+                  position: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+                });
+              });
+            }
+          }, 200);
+        }
+        
+        // Auto-advance to next level when current level is complete
+        if (state.levelComplete && state.level < 5) {
+          setTimeout(() => {
+            this.simpleModeService.nextLevel();
+          }, 2000); // Wait 2 seconds before auto-advancing
+        }
+      });
+    }, 200);
   }
 
   ngOnDestroy() {
@@ -42,29 +89,50 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
     Object.values(this.paintTrackingInterval).forEach(interval => {
       if (interval) clearInterval(interval);
     });
+    // Clean up global listeners
+    document.removeEventListener('mousemove', this.onGlobalMouseMove);
+    document.removeEventListener('mouseup', this.onGlobalMouseUp);
   }
 
   onHammerMouseDown(event: MouseEvent) {
     event.preventDefault();
+    event.stopPropagation();
     this.isDragging = true;
     const rect = (event.target as HTMLElement).getBoundingClientRect();
     this.dragOffset = {
       x: event.clientX - rect.left - rect.width / 2,
       y: event.clientY - rect.top - rect.height / 2
     };
+    
+    // Add global mouse move and up listeners for better dragging
+    document.addEventListener('mousemove', this.onGlobalMouseMove);
+    document.addEventListener('mouseup', this.onGlobalMouseUp);
   }
-
-  onMouseMove(event: MouseEvent) {
+  
+  onGlobalMouseMove = (event: MouseEvent) => {
     if (this.isDragging) {
       this.hammerPosition = {
         x: event.clientX - this.dragOffset.x,
         y: event.clientY - this.dragOffset.y
       };
-      // For Level 1, continue painting while dragging
-      if (this.currentLevel === 1 && this.hoveredDefect) {
-        this.checkDefectHover(event);
-      }
-    } else {
+      // Always check for defect overlap when dragging
+      this.checkDefectHover(event);
+    }
+  }
+  
+  onGlobalMouseUp = (event: MouseEvent) => {
+    if (this.isDragging) {
+      this.isDragging = false;
+      this.checkDefectClick(event);
+      this.clearHoldTimer();
+      document.removeEventListener('mousemove', this.onGlobalMouseMove);
+      document.removeEventListener('mouseup', this.onGlobalMouseUp);
+    }
+  }
+
+  onMouseMove(event: MouseEvent) {
+    // Only check when tool is being dragged (not cursor hover)
+    if (this.isDragging) {
       this.checkDefectHover(event);
     }
   }
@@ -91,19 +159,30 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   checkDefectHover(event: MouseEvent) {
     const defects = document.querySelectorAll('.simple-defect');
     let foundHover = false;
-    const hammerCenterX = this.hammerPosition.x + 30; // Hammer center
-    const hammerCenterY = this.hammerPosition.y + 30;
+    
+    // Get tool position and size
+    const toolEl = document.querySelector('.tool') as HTMLElement;
+    if (!toolEl) return;
+    
+    const toolRect = toolEl.getBoundingClientRect();
+    const toolCenterX = toolRect.left + toolRect.width / 2;
+    const toolCenterY = toolRect.top + toolRect.height / 2;
+    const toolRadius = Math.max(toolRect.width, toolRect.height) / 2;
     
     defects.forEach((defectEl) => {
-      const rect = defectEl.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const distance = Math.sqrt(
-        Math.pow(hammerCenterX - centerX, 2) + 
-        Math.pow(hammerCenterY - centerY, 2)
-      );
+      const defectRect = defectEl.getBoundingClientRect();
+      const defectCenterX = defectRect.left + defectRect.width / 2;
+      const defectCenterY = defectRect.top + defectRect.height / 2;
+      const defectRadius = Math.max(defectRect.width, defectRect.height) / 2;
       
-      if (distance < 80) {
+      // Check if tool overlaps with defect (circle collision)
+      const distance = Math.sqrt(
+        Math.pow(toolCenterX - defectCenterX, 2) + 
+        Math.pow(toolCenterY - defectCenterY, 2)
+      );
+      const minDistance = toolRadius + defectRadius;
+      
+      if (distance < minDistance) {
         const defectId = defectEl.getAttribute('data-defect-id');
         if (defectId && defectId !== this.hoveredDefect) {
           this.hoveredDefect = defectId;
@@ -113,7 +192,7 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
               if (defect.type === 'crack') {
                 this.startHoldTimer(defectId);
               } else if (defect.type === 'screw') {
-                this.startCircularTracking(defectId, centerX, centerY);
+                this.startCircularTracking(defectId, defectCenterX, defectCenterY);
               } else if (defect.type === 'paint') {
                 this.startPaintTracking(defectId);
               } else if (defect.type === 'simple' && this.currentLevel === 1) {
@@ -148,10 +227,15 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
       if (!defect || defect.fixed) return;
       
       if (defect.type === 'simple') {
-        // Level 1: need to paint first
+        // Level 1: need to paint first (but auto-fix should handle it)
+        // This is a fallback in case auto-fix didn't trigger
         if (this.currentLevel === 1) {
-          if ((this.paintProgress[defect.id] || 0) >= 100) {
+          const progress = this.paintProgress[defect.id] || 0;
+          if (progress >= 100) {
+            console.log('Manual fix after 100% paint:', this.hoveredDefect);
             this.simpleModeService.hitDefect(this.hoveredDefect!);
+          } else {
+            console.log('Paint progress not complete:', progress);
           }
         } else {
           // Other levels: simple hit
@@ -220,8 +304,12 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
         return;
       }
       
-      const hammerCenterX = this.hammerPosition.x + 30;
-      const hammerCenterY = this.hammerPosition.y + 30;
+      // Get tool position for circular tracking
+      const toolEl = document.querySelector('.tool') as HTMLElement;
+      if (!toolEl) return;
+      const toolRect = toolEl.getBoundingClientRect();
+      const hammerCenterX = toolRect.left + toolRect.width / 2;
+      const hammerCenterY = toolRect.top + toolRect.height / 2;
       const angle = Math.atan2(hammerCenterY - centerY, hammerCenterX - centerX);
       
       if (lastHammerAngle !== 0) {
@@ -254,7 +342,24 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
     // Paint progress increases while hovering
     const interval = setInterval(() => {
       if (this.hoveredDefect === defectId) {
-        this.paintProgress[defectId] = Math.min(100, (this.paintProgress[defectId] || 0) + 2);
+        const currentProgress = this.paintProgress[defectId] || 0;
+        const newProgress = Math.min(100, currentProgress + 2);
+        this.paintProgress[defectId] = newProgress;
+        
+        // Auto-fix when progress reaches 100%
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          delete this.paintTrackingInterval[defectId];
+          
+          // Check if defect is already fixed
+          this.simpleModeService.getStateSnapshot().subscribe(state => {
+            const defect = state.defects.find(d => d.id === defectId);
+            if (defect && !defect.fixed) {
+              console.log('Auto-fixing defect after 100% paint:', defectId);
+              this.simpleModeService.hitDefect(defectId);
+            }
+          }).unsubscribe();
+        }
       } else {
         clearInterval(interval);
         delete this.paintTrackingInterval[defectId];
@@ -319,6 +424,10 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
 
   getFixedCount(defects: SimpleDefect[]): number {
     return defects.filter(d => d.fixed).length;
+  }
+
+  trackByDefectId(index: number, defect: SimpleDefect): string {
+    return defect.id;
   }
 }
 

@@ -49,6 +49,16 @@ export class SimpleModeService {
     });
   }
 
+  private getViewportSize(): { width: number; height: number } {
+    if (typeof window !== 'undefined') {
+      return {
+        width: window.innerWidth || 1400,
+        height: window.innerHeight || 800
+      };
+    }
+    return { width: 1400, height: 800 }; // Fallback
+  }
+
   hitDefect(defectId: string) {
     const state = this.stateSubject$.value;
     const defects = state.defects.map(d => {
@@ -164,13 +174,55 @@ export class SimpleModeService {
         } else type = 'paint';
       }
 
-      // Random position - use pixels for better distribution across the page
-      // Board is typically 1200px wide, 500px+ tall, so distribute across that area
-      const boardWidth = 1200;
-      const boardHeight = 600;
-      const margin = 50;
-      const x = margin + Math.random() * (boardWidth - margin * 2 - 100); // -100 for defect width
-      const y = margin + Math.random() * (boardHeight - margin * 2 - 100); // -100 for defect height
+      // Random position - distribute across the entire viewport
+      // Get actual viewport size
+      const viewport = this.getViewportSize();
+      
+      // Header and HUD take approximately 150px from top
+      const headerHeight = 150;
+      const margin = 80; // Increased margin for better distribution
+      const defectWidth = 100;
+      const defectHeight = 100;
+      
+      // Use actual viewport dimensions, with fallback
+      const viewportWidth = viewport.width || window.innerWidth || 1920;
+      const viewportHeight = viewport.height || window.innerHeight || 1080;
+      
+      // Board takes full width and remaining height after header
+      const boardWidth = viewportWidth;
+      const boardHeight = viewportHeight - headerHeight;
+      
+      // Calculate available area for defects (with margins)
+      const minX = margin;
+      const maxX = boardWidth - margin - defectWidth;
+      const minY = margin;
+      const maxY = boardHeight - margin - defectHeight;
+      
+      // Ensure we have valid range
+      const availableWidth = Math.max(400, maxX - minX);
+      const availableHeight = Math.max(300, maxY - minY);
+      
+      // Generate random position across entire available area
+      const x = minX + Math.random() * availableWidth;
+      const y = minY + Math.random() * availableHeight;
+      
+      // Debug log for first few defects
+      if (i < 3) {
+        console.log(`Defect ${i} position:`, { 
+          x: Math.round(x), 
+          y: Math.round(y),
+          viewportWidth,
+          viewportHeight,
+          boardWidth,
+          boardHeight,
+          availableWidth: Math.round(availableWidth),
+          availableHeight: Math.round(availableHeight),
+          range: {
+            x: `${Math.round(minX)}-${Math.round(maxX)}`,
+            y: `${Math.round(minY)}-${Math.round(maxY)}`
+          }
+        });
+      }
 
       defects.push({
         id: `defect-${i}`,
