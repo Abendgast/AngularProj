@@ -118,6 +118,52 @@
       visibility: visible !important;
     }
   }
+  
+  &.wrench {
+    filter: drop-shadow(0 0 10px rgba(255, 165, 0, 0.8));
+    width: 60px;
+    height: 60px;
+    font-size: 40px;
+    opacity: 1 !important;
+    visibility: visible !important;
+    
+    &.dragging {
+      cursor: grabbing;
+      transform: scale(1.2) rotate(15deg);
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    
+    &.hovering {
+      filter: drop-shadow(0 0 20px rgba(255, 165, 0, 1));
+      transform: scale(1.1);
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  }
+  
+  &.pliers {
+    filter: drop-shadow(0 0 10px rgba(200, 100, 255, 0.8));
+    width: 60px;
+    height: 60px;
+    font-size: 40px;
+    opacity: 1 !important;
+    visibility: visible !important;
+    
+    &.dragging {
+      cursor: grabbing;
+      transform: scale(1.2) rotate(-10deg);
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    
+    &.hovering {
+      filter: drop-shadow(0 0 20px rgba(200, 100, 255, 1));
+      transform: scale(1.1);
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+  }
 }
 
 @keyframes paintPulse {
@@ -248,27 +294,66 @@
 
 .wire-content {
   flex-direction: row;
-  gap: 16px;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .wire-end {
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--danger);
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--danger);
   border-radius: 8px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: grab;
   transition: all 0.3s ease;
+  position: relative;
+  background: rgba(255, 47, 107, 0.1);
+  
+  &.can-drag {
+    border-style: dashed;
+    animation: wirePulse 1.5s ease infinite;
+  }
   
   &.connected {
     border-color: var(--success);
-    background: rgba(0, 255, 156, 0.2);
+    background: rgba(0, 255, 156, 0.3);
+    border-style: solid;
+    box-shadow: 0 0 15px rgba(0, 255, 156, 0.5);
   }
   
   &:active {
     cursor: grabbing;
+    transform: scale(0.95);
+  }
+  
+  &:hover:not(.connected) {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  }
+}
+
+.wire-hint {
+  font-size: 8px;
+  color: var(--accent);
+  margin-top: 2px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+@keyframes wirePulse {
+  0%, 100% { 
+    border-color: var(--danger);
+    box-shadow: 0 0 5px rgba(255, 47, 107, 0.3);
+  }
+  50% { 
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
   }
 }
 
