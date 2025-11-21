@@ -1,0 +1,115 @@
+<div class="simple-mode-wrap">
+  <header class="simple-header">
+    <h1>🔨 Simple Mode</h1>
+    <button class="btn btn-secondary" (click)="goBack()">
+      <span class="btn-icon">←</span> Back to Menu
+    </button>
+  </header>
+
+  <div class="simple-mode-container" *ngIf="state$ | async as state">
+    <div class="simple-hud">
+      <div class="hud-item">
+        <div class="hud-icon">⚙️</div>
+        <div class="hud-value">Level {{ state.level }} - {{ getLevelName(state.level) }}</div>
+      </div>
+      <div class="hud-item">
+        <div class="hud-icon">✅</div>
+        <div class="hud-value">{{ getFixedCount(state.defects) }} / {{ state.defects.length }}</div>
+      </div>
+    </div>
+
+    <div class="simple-board" 
+         (mousemove)="onMouseMove($event)"
+         (mouseup)="onMouseUp($event)"
+         (mouseleave)="onMouseLeave()"
+         (wheel)="onMouseWheel($event)">
+      
+      <!-- Hammer -->
+      <div class="hammer" 
+           [style.left.px]="hammerPosition.x"
+           [style.top.px]="hammerPosition.y"
+           [class.dragging]="isDragging"
+           [class.hovering]="hoveredDefect !== null"
+           (mousedown)="onHammerMouseDown($event)">
+        🔨
+      </div>
+
+      <!-- Defects -->
+      <div *ngFor="let defect of state.defects" 
+           class="simple-defect"
+           [attr.data-defect-id]="defect.id"
+           [class.fixed]="defect.fixed"
+           [class.hovered]="hoveredDefect === defect.id"
+           [style.left.%]="defect.x"
+           [style.top.%]="defect.y"
+           [class.crack]="defect.type === 'crack'"
+           [class.screw]="defect.type === 'screw'"
+           [class.wire]="defect.type === 'wire'"
+           [class.paint]="defect.type === 'paint'">
+        
+        <!-- Simple defect -->
+        <div *ngIf="defect.type === 'simple'" class="defect-content">
+          <div class="defect-icon">💥</div>
+          <div class="defect-label">Break</div>
+        </div>
+
+        <!-- Crack defect -->
+        <div *ngIf="defect.type === 'crack'" class="defect-content">
+          <div class="defect-icon">⚡</div>
+          <div class="defect-label">Crack</div>
+          <div class="hold-progress" *ngIf="hoveredDefect === defect.id && !defect.fixed">
+            <div class="hold-bar" [style.width.%]="holdProgress"></div>
+            <div class="hold-text">{{ holdProgress >= 100 ? 'Ready!' : 'Hold...' }}</div>
+          </div>
+        </div>
+
+        <!-- Screw defect -->
+        <div *ngIf="defect.type === 'screw'" class="defect-content">
+          <div class="defect-icon" [style.transform]="'rotate(' + (defect.ui?.rotation || 0) + 'deg)'">🔩</div>
+          <div class="defect-label">Screw</div>
+          <div class="circular-progress" *ngIf="hoveredDefect === defect.id && !defect.fixed">
+            <div class="progress-text">{{ circularProgress }}%</div>
+          </div>
+        </div>
+
+        <!-- Wire defect -->
+        <div *ngIf="defect.type === 'wire'" class="defect-content wire-content">
+          <div class="wire-end" 
+               [class.connected]="defect.ui?.connected"
+               draggable="true"
+               (dragstart)="onWireDragStart($event, defect)"
+               (drop)="onWireDrop($event, defect)"
+               (dragover)="allowDrop($event)">
+            <div class="wire-icon">🔌</div>
+          </div>
+          <div class="defect-label">Wire {{ defect.ui?.connected ? '✓' : '' }}</div>
+        </div>
+
+        <!-- Paint defect -->
+        <div *ngIf="defect.type === 'paint'" class="defect-content paint-content">
+          <div class="defect-icon">🎨</div>
+          <div class="defect-label">Paint Leak</div>
+          <div class="paint-progress" *ngIf="hoveredDefect === defect.id && !defect.fixed">
+            <div class="paint-bar" [style.width.%]="paintProgress[defect.id] || 0"></div>
+            <div class="paint-text">{{ (paintProgress[defect.id] || 0) >= 100 ? 'Ready!' : 'Paint...' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Level Complete Message -->
+    <div class="level-complete" *ngIf="state.levelComplete">
+      <div class="complete-content">
+        <h2>Level Complete!</h2>
+        <button class="btn btn-primary" (click)="simpleModeService.nextLevel()" *ngIf="state.level < 5">
+          Next Level
+        </button>
+        <div *ngIf="state.level >= 5" class="complete-message">
+          <p>🎉 Congratulations! You completed all Simple Mode levels!</p>
+          <button class="btn btn-secondary" (click)="goBack()">Back to Menu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

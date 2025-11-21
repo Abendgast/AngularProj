@@ -1,7 +1,32 @@
-<div class="wrap" *ngIf="(state$ | async) as s">
+<!-- Main Menu -->
+<div class="wrap menu-wrap" *ngIf="currentView === 'menu'">
   <header class="header">
     <h1>🧩 Fix the Interface</h1>
     <p class="subtitle">Debug broken UI elements to advance through levels</p>
+  </header>
+
+  <div class="menu-grid">
+    <div class="menu-tile" (click)="startNormalGame()">
+      <div class="menu-tile-icon">🎮</div>
+      <div class="menu-tile-title">Normal Mode</div>
+      <div class="menu-tile-desc">Classic debugging challenge</div>
+    </div>
+    <div class="menu-tile" (click)="startSimpleMode()">
+      <div class="menu-tile-icon">🔨</div>
+      <div class="menu-tile-title">Simple Mode</div>
+      <div class="menu-tile-desc">Easy mode with hammer mechanic</div>
+    </div>
+  </div>
+</div>
+
+<!-- Normal Game View -->
+<div class="wrap" *ngIf="currentView === 'game' && (state$ | async) as s">
+  <header class="header">
+    <h1>🧩 Fix the Interface</h1>
+    <p class="subtitle">Debug broken UI elements to advance through levels</p>
+    <button class="btn btn-secondary" (click)="showMenu()" style="margin-bottom: 16px;">
+      <span class="btn-icon">←</span> Back to Menu
+    </button>
     <div class="hud">
       <div class="hud-item">
         <div class="hud-icon">⏱️</div>
@@ -146,3 +171,6 @@
     </div>
   </footer>
 </div>
+
+<!-- Simple Mode View -->
+<app-simple-mode *ngIf="currentView === 'simple-mode'" (backToMenu)="showMenu()"></app-simple-mode>
