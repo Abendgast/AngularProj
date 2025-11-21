@@ -164,9 +164,13 @@ export class SimpleModeService {
         } else type = 'paint';
       }
 
-      // Random position (avoid edges)
-      const x = 10 + Math.random() * 80;
-      const y = 10 + Math.random() * 80;
+      // Random position - use pixels for better distribution across the page
+      // Board is typically 1200px wide, 500px+ tall, so distribute across that area
+      const boardWidth = 1200;
+      const boardHeight = 600;
+      const margin = 50;
+      const x = margin + Math.random() * (boardWidth - margin * 2 - 100); // -100 for defect width
+      const y = margin + Math.random() * (boardHeight - margin * 2 - 100); // -100 for defect height
 
       defects.push({
         id: `defect-${i}`,

@@ -24,14 +24,18 @@
          (mouseleave)="onMouseLeave()"
          (wheel)="onMouseWheel($event)">
       
-      <!-- Hammer -->
-      <div class="hammer" 
+      <!-- Hammer / Roller -->
+      <div class="tool" 
+           [class.roller]="state.level === 1"
+           [class.hammer]="state.level !== 1"
            [style.left.px]="hammerPosition.x"
            [style.top.px]="hammerPosition.y"
            [class.dragging]="isDragging"
            [class.hovering]="hoveredDefect !== null"
+           [class.painting]="state.level === 1 && isDragging && hoveredDefect !== null"
            (mousedown)="onHammerMouseDown($event)">
-        🔨
+        <span *ngIf="state.level === 1">🖌️</span>
+        <span *ngIf="state.level !== 1">🔨</span>
       </div>
 
       <!-- Defects -->
@@ -40,8 +44,8 @@
            [attr.data-defect-id]="defect.id"
            [class.fixed]="defect.fixed"
            [class.hovered]="hoveredDefect === defect.id"
-           [style.left.%]="defect.x"
-           [style.top.%]="defect.y"
+           [style.left.px]="defect.x"
+           [style.top.px]="defect.y"
            [class.crack]="defect.type === 'crack'"
            [class.screw]="defect.type === 'screw'"
            [class.wire]="defect.type === 'wire'"
@@ -51,6 +55,10 @@
         <div *ngIf="defect.type === 'simple'" class="defect-content">
           <div class="defect-icon">💥</div>
           <div class="defect-label">Break</div>
+          <div class="paint-progress" *ngIf="state.level === 1 && hoveredDefect === defect.id && !defect.fixed">
+            <div class="paint-bar" [style.width.%]="paintProgress[defect.id] || 0"></div>
+            <div class="paint-text">{{ (paintProgress[defect.id] || 0) >= 100 ? 'Ready!' : 'Paint...' }}</div>
+          </div>
         </div>
 
         <!-- Crack defect -->
