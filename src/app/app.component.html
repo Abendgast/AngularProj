@@ -1,175 +1,102 @@
 <!-- Main Menu -->
-<div class="wrap menu-wrap" *ngIf="currentView === 'menu'">
-  <header class="header">
-    <h1>🧩 Fix the Interface</h1>
-    <p class="subtitle">Debug broken UI elements to advance through levels</p>
-  </header>
+<div class="menu-wrap" *ngIf="currentView === 'menu'">
+  
+  <div class="menu-container">
+    <!-- Header Section -->
+    <header class="menu-header">
+      <div class="logo-section">
+        <div class="logo-icon">🧩</div>
+        <div class="logo-text">
+          <h1 class="game-title">Fix the Interface</h1>
+          <p class="game-tagline">Master the art of debugging</p>
+        </div>
+      </div>
+    </header>
 
-  <div class="menu-grid">
-    <div class="menu-tile" (click)="startNormalGame()">
-      <div class="menu-tile-icon">🎮</div>
-      <div class="menu-tile-title">Normal Mode</div>
-      <div class="menu-tile-desc">Classic debugging challenge</div>
-    </div>
-    <div class="menu-tile" (click)="startSimpleMode()">
-      <div class="menu-tile-icon">🔨</div>
-      <div class="menu-tile-title">Simple Mode</div>
-      <div class="menu-tile-desc">Easy mode with hammer mechanic</div>
+    <!-- Main Content -->
+    <div class="menu-content">
+      <!-- Primary Action Card -->
+      <div class="action-card" (click)="startSimpleMode()">
+        <div class="card-header">
+          <div class="card-icon">🎮</div>
+          <div class="card-badge">New</div>
+        </div>
+        <div class="card-body">
+          <h2 class="card-title">Start Game</h2>
+          <p class="card-description">Begin your journey through 5 challenging levels of interface repair</p>
+        </div>
+        <div class="card-footer">
+          <span class="card-action">Play Now</span>
+          <span class="card-arrow">→</span>
+        </div>
+      </div>
+
+      <!-- Features Grid -->
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔨</div>
+          <h3 class="feature-title">5 Levels</h3>
+          <p class="feature-text">Progressive difficulty from easy to expert</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🛠️</div>
+          <h3 class="feature-title">4 Tools</h3>
+          <p class="feature-text">Brush, Hammer, Wrench, and Pliers</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3 class="feature-title">Real-time</h3>
+          <p class="feature-text">Timer tracks your performance</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3 class="feature-title">Precision</h3>
+          <p class="feature-text">Use the right tool for each task</p>
+        </div>
+      </div>
+
+      <!-- Stats Section -->
+      <div class="stats-section">
+        <div class="stat-item">
+          <div class="stat-value">5</div>
+          <div class="stat-label">Levels</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-value">4</div>
+          <div class="stat-label">Tools</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-value">∞</div>
+          <div class="stat-label">Challenges</div>
+        </div>
+      </div>
+
+      <!-- Instructions Section -->
+      <div class="instructions-card">
+        <h3 class="instructions-title">How to Play</h3>
+        <div class="instructions-list">
+          <div class="instruction-item">
+            <span class="instruction-number">1</span>
+            <span class="instruction-text">Select the appropriate tool for each defect</span>
+          </div>
+          <div class="instruction-item">
+            <span class="instruction-number">2</span>
+            <span class="instruction-text">Drag the tool over the broken element</span>
+          </div>
+          <div class="instruction-item">
+            <span class="instruction-number">3</span>
+            <span class="instruction-text">Complete the required action to fix it</span>
+          </div>
+          <div class="instruction-item">
+            <span class="instruction-number">4</span>
+            <span class="instruction-text">Fix all elements to advance to the next level</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-
-<!-- Normal Game View -->
-<div class="wrap" *ngIf="currentView === 'game' && (state$ | async) as s">
-  <header class="header">
-    <h1>🧩 Fix the Interface</h1>
-    <p class="subtitle">Debug broken UI elements to advance through levels</p>
-    <button class="btn btn-secondary" (click)="showMenu()" style="margin-bottom: 16px;">
-      <span class="btn-icon">←</span> Back to Menu
-    </button>
-    <div class="hud">
-      <div class="hud-item">
-        <div class="hud-icon">⏱️</div>
-        <div class="hud-value">{{ s.timeLeft }}s</div>
-      </div>
-      <div class="hud-item">
-        <div class="hud-icon">🏆</div>
-        <div class="hud-value">{{ s.score }}</div>
-      </div>
-      <div class="hud-item">
-        <div class="hud-icon">⚙️</div>
-        <div class="hud-value">Level {{ s.level }}</div>
-      </div>
-      <div class="hud-item">
-        <div class="hud-icon">👑</div>
-        <div class="hud-value">{{ bestScore() }}</div>
-      </div>
-    </div>
-  </header>
-
-  <nav class="controls">
-    <button class="btn btn-primary" (click)="start()" [disabled]="s.running">
-      <span class="btn-icon">▶</span> Start
-    </button>
-    <button class="btn btn-secondary" (click)="stop()" [disabled]="!s.running">
-      <span class="btn-icon">⏹</span> Stop
-    </button>
-    <button class="btn btn-hint" (click)="useHint()" [disabled]="!s.running">
-      <span class="btn-icon">💡</span> Hint (-8s)
-    </button>
-  </nav>
-
-  <section class="board" *ngIf="s.elements?.length">
-    <div
-      class="tile"
-      *ngFor="let el of s.elements; let i = index"
-      [class.fixed]="el.fixed"
-      [class.blur]="el.ui?.blurred"
-      [style.transform]="'rotate(' + (el.ui?.rotation || 0) + 'deg)'"
-      draggable="true"
-      (dragstart)="dragStart($event, el)"
-      (drop)="drop($event, el)"
-      (dragover)="allowDrop($event)"
-      (click)="clickElement(el, $event)"
-      (dblclick)="rotateElement(el, $event)"
-      [title]="el.hint + (el.fixed ? ' ✓ FIXED' : '')"
-    >
-      <div class="tile-header">
-        <small class="type">{{ el.type }}</small>
-        <small class="diff">{{ 'star'.repeat(el.difficulty) }}</small>
-      </div>
-
-      <div class="tile-body">
-        <ng-container [ngSwitch]="el.type">
-          <!-- BUTTON: Must click to activate (clickBroken) -->
-          <button
-            *ngSwitchCase="'button'"
-            class="inner-btn"
-            [disabled]="el.ui?.disabled"
-            (click)="$event.stopPropagation()"
-          >
-            {{ el.fixed ? '✓ Fixed' : 'Click me' }}
-          </button>
-
-          <!-- INPUT: Type the exact text (textBroken) -->
-          <input
-            *ngSwitchCase="'input'"
-            type="text"
-            class="inner-input"
-            [placeholder]="el.brokenProps.textBroken ? 'Type: ' + el.brokenProps.textBroken.expected : 'Type...'"
-            [value]="el.ui?.currentText"
-            (input)="onTextChange(el, $any($event.target).value)"
-            (dragstart)="onInputDragStart($event)"
-            [disabled]="el.ui?.disabled"
-            (click)="$event.stopPropagation()"
-          />
-
-          <!-- CARD: Interactive element with color picker and text -->
-          <div *ngSwitchCase="'card'" class="card" (click)="$event.stopPropagation()">
-            <div class="card-title">{{ el.fixed ? '✓ Fixed' : 'Card' }}</div>
-            <div class="card-controls">
-              <div *ngIf="el.brokenProps.colorWrong" class="color-picker">
-                <input
-                  type="color"
-                  [value]="el.ui?.currentColor"
-                  (input)="onColorPick(el, $any($event.target).value)"
-                  (click)="$event.stopPropagation()"
-                />
-              </div>
-              <div *ngIf="el.brokenProps.textBroken" class="text-input">
-                <input
-                  type="text"
-                  [placeholder]="'Fix: ' + el.brokenProps.textBroken.expected"
-                  (input)="onTextChange(el, $any($event.target).value)"
-                  (click)="$event.stopPropagation()"
-                  (dragstart)="onInputDragStart($event)"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- SLIDER: Drag to exact position (sliderBroken) -->
-          <div *ngSwitchCase="'slider'" class="slider-container" (click)="$event.stopPropagation()">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              [value]="el.ui?.sliderValue || 0"
-              (input)="onSliderChange(el, $any($event.target).value)"
-              class="slider"
-            />
-            <span class="slider-value">{{ el.ui?.sliderValue || 0 }}</span>
-          </div>
-
-          <!-- LABEL: Read-only, just needs to be fixed -->
-          <div *ngSwitchCase="'label'" class="label-box" (click)="$event.stopPropagation()">
-            <span class="label-text">{{ el.fixed ? '✓ OK' : 'Read me' }}</span>
-          </div>
-
-          <!-- IMAGE: Gallery/decorative (click to show) -->
-          <div *ngSwitchCase="'image'" class="image-container" (click)="$event.stopPropagation()">
-            <img
-              [src]="'https://picsum.photos/seed/' + el.id + '/100/80?blur=5'"
-              alt="tile image"
-              class="tile-image"
-            />
-          </div>
-        </ng-container>
-      </div>
-
-      <div class="tile-footer">
-        <small class="status">{{ el.fixed ? '✓' : '✗' }}</small>
-        <small class="order">pos: {{ el.ui?.orderIndex }}</small>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div *ngIf="s.message" class="message">{{ s.message }}</div>
-    <div *ngIf="!s.running && !s.message" class="hint-text">
-      {{ isLevelComplete(s.elements) ? 'All fixed! Click Start to continue.' : 'Click Start to begin.' }}
-    </div>
-  </footer>
 </div>
 
 <!-- Simple Mode View -->
