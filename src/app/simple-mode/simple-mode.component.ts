@@ -14,7 +14,7 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   isDragging = false;
   dragOffset = { x: 0, y: 0 };
   hoveredDefect: string | null = null;
-  currentToolType: string = 'hammer'; // 'roller', 'hammer', 'wrench', 'pliers', 'brush'
+  currentToolType: string = 'brush'; // 'brush', 'hammer', 'wrench', 'pliers'
   holdTimer: any = null;
   holdProgress = 0;
   circularProgress = 0;
@@ -23,6 +23,9 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
   circularTrackingInterval: any = null;
   paintTrackingInterval: { [key: string]: any } = {};
   currentLevel = 1;
+  elapsedTime = 0; // in seconds
+  gameTimer: any = null;
+  levelStartTime = Date.now();
 
   constructor(public simpleModeService: SimpleModeService) {}
 
@@ -32,13 +35,24 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
       this.simpleModeService.startLevel(1);
       
       // Subscribe to state changes
+      let previousLevel = 1;
       this.state$.subscribe(state => {
-        this.currentLevel = state.level;
-        // Reset tool type when level changes
-        if (state.level === 1) {
-          this.currentToolType = 'roller';
+        // Only reset tool type when level actually changes, not on every state update
+        if (state.level !== previousLevel) {
+          previousLevel = state.level;
+          this.currentLevel = state.level;
+          this.levelStartTime = Date.now();
+          this.elapsedTime = 0;
+          this.startTimer(); // Restart timer for new level
+          
+          // Reset tool type when level changes
+          if (state.level === 1) {
+            this.currentToolType = 'brush';
+          } else {
+            this.currentToolType = 'hammer';
+          }
         } else {
-          this.currentToolType = 'hammer';
+          this.currentLevel = state.level;
         }
         
         // Debug log
@@ -83,10 +97,36 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           }, 2000); // Wait 2 seconds before auto-advancing
         }
       });
+      
+      // Start game timer
+      this.startTimer();
     }, 200);
+  }
+  
+  startTimer() {
+    if (this.gameTimer) {
+      clearInterval(this.gameTimer);
+    }
+    this.gameTimer = setInterval(() => {
+      this.elapsedTime = Math.floor((Date.now() - this.levelStartTime) / 1000);
+    }, 1000); // Update every second
+  }
+  
+  stopTimer() {
+    if (this.gameTimer) {
+      clearInterval(this.gameTimer);
+      this.gameTimer = null;
+    }
+  }
+  
+  formatTime(seconds: number): string {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
   ngOnDestroy() {
+    this.stopTimer();
     if (this.holdTimer) {
       clearInterval(this.holdTimer);
     }
@@ -210,27 +250,19 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           this.simpleModeService.getStateSnapshot().subscribe(state => {
             const defect = state.defects.find(d => d.id === defectId);
             if (defect && !defect.fixed) {
-              // Update tool type based on defect type (Level 2+)
-              if (this.currentLevel >= 2) {
-                if (defect.type === 'crack' || defect.type === 'simple') {
-                  this.currentToolType = 'hammer';
-                } else if (defect.type === 'screw') {
-                  this.currentToolType = 'wrench';
-                } else if (defect.type === 'wire') {
-                  this.currentToolType = 'pliers';
-                } else if (defect.type === 'paint') {
-                  this.currentToolType = 'brush';
-                }
-              }
-              
-              if (defect.type === 'crack') {
-                this.startHoldTimer(defectId);
-              } else if (defect.type === 'screw') {
-                this.startCircularTracking(defectId, defectCenterX, defectCenterY);
-              } else if (defect.type === 'paint') {
+              // Don't auto-switch tools - user selects tool manually
+              // Start appropriate tracking based on defect type and selected tool
+              if (defect.type === 'simple' && this.currentLevel === 1 && this.currentToolType === 'brush') {
+                // Level 1: simple defects need painting with brush
                 this.startPaintTracking(defectId);
-              } else if (defect.type === 'simple' && this.currentLevel === 1) {
-                // Level 1: simple defects need painting
+              } else if (defect.type === 'crack' && this.currentToolType === 'hammer') {
+                // Cracks need hammer
+                this.startHoldTimer(defectId);
+              } else if (defect.type === 'screw' && this.currentToolType === 'wrench') {
+                // Screws need wrench
+                this.startCircularTracking(defectId, defectCenterX, defectCenterY);
+              } else if (defect.type === 'paint' && this.currentToolType === 'brush') {
+                // Paint leaks need brush
                 this.startPaintTracking(defectId);
               }
             }
@@ -248,10 +280,6 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           this.clearHoldTimer();
           this.clearCircularTracking();
           this.clearPaintTracking();
-          // Reset tool to default
-          if (this.currentLevel >= 2) {
-            this.currentToolType = 'hammer';
-          }
         }
       }).unsubscribe();
     }
@@ -264,10 +292,10 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
       const defect = state.defects.find(d => d.id === this.hoveredDefect);
       if (!defect || defect.fixed) return;
       
+      // Check if correct tool is being used
       if (defect.type === 'simple') {
-        // Level 1: need to paint first (but auto-fix should handle it)
-        // This is a fallback in case auto-fix didn't trigger
-        if (this.currentLevel === 1) {
+        if (this.currentLevel === 1 && this.currentToolType === 'brush') {
+          // Level 1: need to paint first
           const progress = this.paintProgress[defect.id] || 0;
           if (progress >= 100) {
             console.log('Manual fix after 100% paint:', this.hoveredDefect);
@@ -275,24 +303,24 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
           } else {
             console.log('Paint progress not complete:', progress);
           }
-        } else {
-          // Other levels: simple hit
+        } else if (this.currentLevel > 1 && this.currentToolType === 'hammer') {
+          // Other levels: simple hit with hammer
           this.simpleModeService.hitDefect(this.hoveredDefect!);
         }
-      } else if (defect.type === 'crack') {
+      } else if (defect.type === 'crack' && this.currentToolType === 'hammer') {
         if (this.holdProgress >= 100) {
           console.log('Fixing crack defect:', this.hoveredDefect);
           this.simpleModeService.hitDefect(this.hoveredDefect!);
         } else {
           console.log('Crack not ready, hold progress:', this.holdProgress);
         }
-      } else if (defect.type === 'screw') {
+      } else if (defect.type === 'screw' && this.currentToolType === 'wrench') {
         // Check if screw has been rotated enough (via wheel or circular motion)
         const wheelProgress = defect.ui?.wheelProgress || 0;
         if (this.circularProgress >= 100 || wheelProgress >= 100) {
           this.simpleModeService.hitDefect(this.hoveredDefect!);
         }
-      } else if (defect.type === 'wire') {
+      } else if (defect.type === 'wire' && this.currentToolType === 'pliers') {
         // Wire connection is handled separately - need to connect first
         if (defect.ui?.connected) {
           console.log('Fixing connected wire defect:', this.hoveredDefect);
@@ -300,7 +328,7 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
         } else {
           console.log('Wire not connected yet. Drag wire ends together first.');
         }
-      } else if (defect.type === 'paint') {
+      } else if (defect.type === 'paint' && this.currentToolType === 'brush') {
         const progress = this.paintProgress[defect.id] || 0;
         if (progress >= 100) {
           this.simpleModeService.hitDefect(this.hoveredDefect!);
@@ -522,6 +550,10 @@ export class SimpleModeComponent implements OnInit, OnDestroy {
 
   trackByDefectId(index: number, defect: SimpleDefect): string {
     return defect.id;
+  }
+
+  selectTool(tool: string) {
+    this.currentToolType = tool;
   }
 }
 

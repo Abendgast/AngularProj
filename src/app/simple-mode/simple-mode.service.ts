@@ -157,7 +157,7 @@ export class SimpleModeService {
 
   private generateLevel(level: number): SimpleDefect[] {
     const defects: SimpleDefect[] = [];
-    const count = 10;
+    const count = level === 1 ? 5 : 10;
     const wirePairs: string[] = [];
 
     for (let i = 0; i < count; i++) {
@@ -224,9 +224,34 @@ export class SimpleModeService {
       const availableWidth = Math.max(400, maxX - minX);
       const availableHeight = Math.max(300, maxY - minY);
       
-      // Generate random position across entire available area
-      const x = minX + Math.random() * availableWidth;
-      const y = minY + Math.random() * availableHeight;
+      // Generate random position with collision detection
+      let x: number, y: number;
+      let attempts = 0;
+      const maxAttempts = 100;
+      const padding = 20; // Minimum distance between defects
+      
+      do {
+        x = minX + Math.random() * availableWidth;
+        y = minY + Math.random() * availableHeight;
+        attempts++;
+        
+        // Check collision with existing defects
+        let hasCollision = false;
+        for (const existingDefect of defects) {
+          const distance = Math.sqrt(
+            Math.pow(x - existingDefect.x, 2) + Math.pow(y - existingDefect.y, 2)
+          );
+          const minDistance = defectWidth + padding;
+          if (distance < minDistance) {
+            hasCollision = true;
+            break;
+          }
+        }
+        
+        if (!hasCollision || attempts >= maxAttempts) {
+          break;
+        }
+      } while (attempts < maxAttempts);
       
       // Debug log for first few defects
       if (i < 3) {
@@ -256,11 +281,39 @@ export class SimpleModeService {
       });
     }
 
-    // Store wire pairs for level 4 and 5
-    if (level >= 4 && wirePairs.length >= 2) {
-      // Ensure even number of wires
-      if (wirePairs.length % 2 === 1) {
-        wirePairs.pop();
+    // Ensure even number of wires for levels 4 and 5
+    if (level >= 4) {
+      const wireDefects = defects.filter(d => d.type === 'wire');
+      const wireCount = wireDefects.length;
+      
+      // If odd number of wires, convert the last wire to a different type
+      if (wireCount % 2 === 1 && wireCount > 0) {
+        const lastWireIndex = defects.findIndex(d => d.type === 'wire');
+        if (lastWireIndex !== -1) {
+          // Convert last wire to a simple defect
+          defects[lastWireIndex] = {
+            ...defects[lastWireIndex],
+            type: 'simple',
+            ui: undefined
+          };
+        }
+      }
+      
+      // Ensure we have at least 2 wires for pairing
+      if (wireCount < 2) {
+        // Find a non-wire defect to convert to wire
+        const nonWireDefects = defects.filter(d => d.type !== 'wire' && d.type !== 'screw');
+        if (nonWireDefects.length > 0) {
+          const toConvert = nonWireDefects[0];
+          const index = defects.findIndex(d => d.id === toConvert.id);
+          if (index !== -1) {
+            defects[index] = {
+              ...defects[index],
+              type: 'wire',
+              ui: { connected: false }
+            };
+          }
+        }
       }
     }
 

@@ -23,11 +23,79 @@
     font-size: 28px;
     font-weight: 700;
     letter-spacing: 2px;
-    background: linear-gradient(135deg, var(--accent), var(--success));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text-primary);
   }
+}
+
+.tool-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(10, 15, 25, 0.6);
+  border-bottom: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tool-panel-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.tool-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  background: rgba(0, 255, 255, 0.05);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+  
+  &:hover:not(:disabled) {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+  }
+  
+  &.active {
+    background: rgba(0, 255, 255, 0.15);
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+  }
+  
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.tool-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.5));
+}
+
+.tool-name {
+  font-size: 11px;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .simple-hud {
@@ -88,7 +156,7 @@
     }
   }
   
-  &.roller {
+  &.brush {
     filter: drop-shadow(0 0 10px rgba(100, 200, 255, 0.8));
     width: 80px;
     height: 50px;
@@ -201,9 +269,10 @@
   }
   
   &.fixed {
-    background: rgba(0, 255, 156, 0.2);
-    border-color: var(--success);
-    opacity: 0.6;
+    background: rgba(0, 255, 0, 0.5) !important;
+    border-color: #00ff00 !important;
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.8) !important;
+    opacity: 1;
   }
   
   &.crack {
